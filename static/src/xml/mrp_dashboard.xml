@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+    <t t-name="mrp_dashboard.MrpDashboard">
+        <div class="mrp_dashboard">
+            <!-- Header avec contrôles -->
+            <div class="db-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="db-title mb-0">Tableau de bord Fabrication</h1>
+                    <div class="db-controls">
+                        <span class="db-last-update" t-if="state.lastUpdate">
+                            <i class="fa fa-clock-o"/> <t t-esc="state.lastUpdate"/>
+                        </span>
+
+                        <!-- Auto-refresh -->
+                        <select class="db-select"
+                                t-on-change="(ev) => this.onRefreshIntervalChange(ev)">
+                            <option value="0" t-att-selected="state.autoRefreshInterval === 0 ? 'selected' : undefined">
+                                Auto: Off
+                            </option>
+                            <option value="30" t-att-selected="state.autoRefreshInterval === 30 ? 'selected' : undefined">
+                                30s
+                            </option>
+                            <option value="60" t-att-selected="state.autoRefreshInterval === 60 ? 'selected' : undefined">
+                                1 min
+                            </option>
+                            <option value="120" t-att-selected="state.autoRefreshInterval === 120 ? 'selected' : undefined">
+                                2 min
+                            </option>
+                            <option value="300" t-att-selected="state.autoRefreshInterval === 300 ? 'selected' : undefined">
+                                5 min
+                            </option>
+                        </select>
+
+                        <button t-attf-class="btn-filter {{ hasActiveFilters() ? 'active' : '' }}"
+                                t-on-click="toggleFilters">
+                            <i class="fa fa-filter"/>
+                            Filtres
+                            <span class="filter-dot" t-if="hasActiveFilters()"/>
+                        </button>
+
+                        <button class="btn-refresh" t-on-click="() => this.loadData()">
+                            <i class="fa fa-refresh"/> Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panneau de filtres (collapsible) -->
+                <div class="db-filters-panel" t-if="state.showFilters">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label>Date début</label>
+                            <input type="date" class="filter-input"
+                                   t-att-value="state.filters.date_from"
+                                   t-on-change="(ev) => this.onFilterChange('date_from', ev)"/>
+                        </div>
+                        <div class="filter-group">
+                            <label>Date fin</label>
+                            <input type="date" class="filter-input"
+                                   t-att-value="state.filters.date_to"
+                                   t-on-change="(ev) => this.onFilterChange('date_to', ev)"/>
+                        </div>
+                        <div class="filter-group">
+                            <label>Responsable</label>
+                            <select class="filter-input"
+                                    t-on-change="(ev) => this.onFilterChange('responsible_id', ev)">
+                                <option value="0">-- Tous --</option>
+                                <t t-foreach="state.responsibles" t-as="user" t-key="user.id">
+                                    <option t-att-value="user.id"
+                                            t-att-selected="state.filters.responsible_id === user.id ? 'selected' : undefined">
+                                        <t t-esc="user.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Produit</label>
+                            <select class="filter-input"
+                                    t-on-change="(ev) => this.onFilterChange('product_id', ev)">
+                                <option value="0">-- Tous --</option>
+                                <t t-foreach="state.products" t-as="prod" t-key="prod.id">
+                                    <option t-att-value="prod.id"
+                                            t-att-selected="state.filters.product_id === prod.id ? 'selected' : undefined">
+                                        <t t-esc="prod.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Jours graphique</label>
+                            <select class="filter-input"
+                                    t-on-change="(ev) => this.onFilterChange('chart_days', ev)">
+                                <option value="7" t-att-selected="state.filters.chart_days === 7 ? 'selected' : undefined">7 jours</option>
+                                <option value="14" t-att-selected="state.filters.chart_days === 14 ? 'selected' : undefined">14 jours</option>
+                                <option value="30" t-att-selected="state.filters.chart_days === 30 ? 'selected' : undefined">30 jours</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Période stats</label>
+                            <select class="filter-input"
+                                    t-on-change="(ev) => this.onFilterChange('recent_days', ev)">
+                                <option value="7" t-att-selected="state.filters.recent_days === 7 ? 'selected' : undefined">7 jours</option>
+                                <option value="30" t-att-selected="state.filters.recent_days === 30 ? 'selected' : undefined">30 jours</option>
+                                <option value="60" t-att-selected="state.filters.recent_days === 60 ? 'selected' : undefined">60 jours</option>
+                                <option value="90" t-att-selected="state.filters.recent_days === 90 ? 'selected' : undefined">90 jours</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filters-actions">
+                        <button class="btn-apply" t-on-click="applyFilters">
+                            <i class="fa fa-check"/> Appliquer
+                        </button>
+                        <button class="btn-reset" t-on-click="resetFilters">
+                            <i class="fa fa-times"/> Réinitialiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <t t-if="state.loading">
+                <div class="loading">
+                    <i class="fa fa-spinner fa-spin fa-2x me-2"/> Chargement...
+                </div>
+            </t>
+
+            <t t-else="">
+                <!-- KPI Cards -->
+                <div class="kpi-row">
+                    <div class="kpi-card draft" t-on-click="() => this.openMOs('draft')">
+                        <div class="kpi-value" t-esc="state.data.state_counts.draft || 0"/>
+                        <div class="kpi-label">Brouillon</div>
+                    </div>
+                    <div class="kpi-card confirmed" t-on-click="() => this.openMOs('confirmed')">
+                        <div class="kpi-value" t-esc="state.data.state_counts.confirmed || 0"/>
+                        <div class="kpi-label">Confirmés</div>
+                    </div>
+                    <div class="kpi-card progress" t-on-click="() => this.openMOs('progress')">
+                        <div class="kpi-value" t-esc="state.data.state_counts.progress || 0"/>
+                        <div class="kpi-label">En cours</div>
+                    </div>
+                    <div class="kpi-card to_close" t-on-click="() => this.openMOs('to_close')">
+                        <div class="kpi-value" t-esc="state.data.state_counts.to_close || 0"/>
+                        <div class="kpi-label">A clôturer</div>
+                    </div>
+                    <div class="kpi-card done" t-on-click="() => this.openMOs('done')">
+                        <div class="kpi-value" t-esc="state.data.state_counts.done || 0"/>
+                        <div class="kpi-label">Terminés</div>
+                    </div>
+                    <div class="kpi-card late" t-on-click="() => this.openLateMOs()">
+                        <div class="kpi-value" t-esc="state.data.late_count || 0"/>
+                        <div class="kpi-label">En retard</div>
+                    </div>
+                    <div class="kpi-card available">
+                        <div class="kpi-value" t-esc="state.data.available_count || 0"/>
+                        <div class="kpi-label">Composants OK</div>
+                    </div>
+                    <div class="kpi-card waiting">
+                        <div class="kpi-value" t-esc="state.data.waiting_count || 0"/>
+                        <div class="kpi-label">En attente</div>
+                    </div>
+                </div>
+
+                <div class="db-columns">
+                    <!-- Production chart -->
+                    <div class="db-col">
+                        <div class="db-section">
+                            <div class="db-section-title">
+                                <i class="fa fa-bar-chart me-2"/>
+                                Production <t t-esc="state.filters.chart_days"/> derniers jours
+                                <span class="float-end text-muted" style="font-size:0.85rem;">
+                                    <t t-esc="state.filters.recent_days"/>j:
+                                    <strong t-esc="state.data.done_recent_count"/> OFs
+                                    / <strong t-esc="formatQty(state.data.done_recent_qty)"/> unités
+                                </span>
+                            </div>
+                            <div class="chart-container">
+                                <div class="bar-chart">
+                                    <t t-foreach="state.data.daily_production" t-as="day" t-key="day.date">
+                                        <div class="bar-group">
+                                            <div class="bar-value" t-esc="day.qty"/>
+                                            <div class="bar"
+                                                 t-attf-style="height: {{ getBarHeight(day.qty) }}px"/>
+                                            <div class="bar-label" t-esc="day.date"/>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Workcenters -->
+                        <div class="db-section">
+                            <div class="db-section-title">
+                                <i class="fa fa-cogs me-2"/>Postes de travail
+                            </div>
+                            <div class="wc-cards">
+                                <t t-foreach="state.data.workcenters" t-as="wc" t-key="wc.id">
+                                    <div t-attf-class="wc-card {{ wc.working_state === 'blocked' ? 'wc-blocked' : wc.working_state === 'done' ? 'wc-done' : '' }}">
+                                        <div class="wc-name" t-esc="wc.name"/>
+                                        <div class="wc-state">
+                                            <t t-if="wc.working_state === 'normal'">En production</t>
+                                            <t t-elif="wc.working_state === 'blocked'">Bloqué</t>
+                                            <t t-else="">En maintenance</t>
+                                            <span class="ms-2">
+                                                Eff: <strong><t t-esc="wc.time_efficiency"/>%</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </t>
+                                <t t-if="!state.data.workcenters.length">
+                                    <div class="text-muted p-3">Aucun poste de travail configuré</div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active MOs table + Work Orders -->
+                    <div class="db-col">
+                        <div class="db-section">
+                            <div class="db-section-title">
+                                <i class="fa fa-industry me-2"/>Ordres de fabrication actifs
+                                <span class="float-end text-muted" style="font-size:0.85rem;">
+                                    <t t-esc="state.data.active_mos.length"/> affichés
+                                </span>
+                            </div>
+                            <t t-if="state.data.active_mos.length">
+                                <table class="mo-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Référence</th>
+                                            <th>Produit</th>
+                                            <th>Progression</th>
+                                            <th>État</th>
+                                            <th>Composants</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="state.data.active_mos" t-as="mo" t-key="mo.id">
+                                            <tr t-on-click="() => this.openMO(mo.id)">
+                                                <td>
+                                                    <t t-if="mo.priority === '1'">
+                                                        <i class="fa fa-star text-warning me-1"/>
+                                                    </t>
+                                                    <t t-esc="mo.name"/>
+                                                </td>
+                                                <td t-esc="mo.product_id[1]"/>
+                                                <td>
+                                                    <div class="progress-bar-container">
+                                                        <div class="progress-bar-fill"
+                                                             t-attf-style="width: {{ getProgress(mo) }}%"/>
+                                                    </div>
+                                                    <span style="font-size:0.8rem;">
+                                                        <t t-esc="mo.qty_produced"/>/<t t-esc="mo.product_qty"/>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span t-attf-class="badge-state badge-{{ mo.state }}">
+                                                        <t t-esc="getStateLabel(mo.state)"/>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span t-attf-class="badge-availability badge-{{ getAvailClass(mo) }}">
+                                                        <t t-esc="getAvailLabel(mo)"/>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </t>
+                            <t t-else="">
+                                <div class="text-muted text-center p-4">
+                                    <i class="fa fa-check-circle fa-2x mb-2 d-block text-success"/>
+                                    Aucun OF actif
+                                </div>
+                            </t>
+                        </div>
+
+                        <!-- Work Orders -->
+                        <div class="db-section">
+                            <div class="db-section-title">
+                                <i class="fa fa-tasks me-2"/>Ordres de travail en cours
+                            </div>
+                            <t t-if="state.data.workorders.length">
+                                <ul class="wo-list">
+                                    <t t-foreach="state.data.workorders" t-as="wo" t-key="wo.id">
+                                        <li>
+                                            <div>
+                                                <span class="wo-name" t-esc="wo.name"/>
+                                                <br/>
+                                                <span class="wo-wc">
+                                                    <i class="fa fa-wrench me-1"/>
+                                                    <t t-esc="wo.workcenter_id[1]"/>
+                                                    - <t t-esc="wo.production_id[1]"/>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span t-attf-class="badge-state badge-{{ wo.state === 'ready' ? 'confirmed' : wo.state === 'progress' ? 'progress' : 'draft' }}">
+                                                    <t t-if="wo.state === 'ready'">Prêt</t>
+                                                    <t t-elif="wo.state === 'progress'">En cours</t>
+                                                    <t t-else="">En attente</t>
+                                                </span>
+                                            </div>
+                                        </li>
+                                    </t>
+                                </ul>
+                            </t>
+                            <t t-else="">
+                                <div class="text-muted text-center p-3">Aucun ordre de travail en cours</div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>
