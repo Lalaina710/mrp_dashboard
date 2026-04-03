@@ -10,5 +10,6 @@
         name="Tableau de bord"
         parent="mrp.menu_mrp_root"
         action="action_mrp_dashboard"
-        sequence="1"/>
+        sequence="1"
+        groups="mrp_dashboard.group_mrp_dashboard_user"/>
 </odoo>

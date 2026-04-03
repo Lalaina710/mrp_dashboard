@@ -49,5 +49,5 @@
         parent="mrp.menu_mrp_configuration"
         action="action_mrp_dashboard_config"
         sequence="100"
-        groups="mrp.group_mrp_manager"/>
+        groups="mrp_dashboard.group_mrp_dashboard_manager"/>
 </odoo>

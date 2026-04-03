@@ -1,12 +1,15 @@
 from odoo import http
 from odoo.http import request
 from datetime import datetime, timedelta
+from werkzeug.exceptions import Forbidden
 
 
 class MrpDashboardController(http.Controller):
 
     @http.route('/mrp_dashboard/data', type='json', auth='user')
     def get_dashboard_data(self, **kwargs):
+        if not request.env.user.has_group('mrp_dashboard.group_mrp_dashboard_user'):
+            raise Forbidden("Accès non autorisé au dashboard fabrication")
         MO = request.env['mrp.production']
 
         # Récupérer les paramètres dynamiques (filtres du frontend)
@@ -147,6 +150,8 @@ class MrpDashboardController(http.Controller):
     @http.route('/mrp_dashboard/filters_data', type='json', auth='user')
     def get_filters_data(self):
         """Retourne les données pour les listes déroulantes des filtres."""
+        if not request.env.user.has_group('mrp_dashboard.group_mrp_dashboard_user'):
+            raise Forbidden("Accès non autorisé au dashboard fabrication")
         # Responsables ayant des OFs
         users = request.env['mrp.production'].read_group(
             [('user_id', '!=', False)],

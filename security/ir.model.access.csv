@@ -1,3 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_mrp_dashboard_config_user,mrp.dashboard.config.user,model_mrp_dashboard_config,mrp.group_mrp_user,1,0,0,0
-access_mrp_dashboard_config_manager,mrp.dashboard.config.manager,model_mrp_dashboard_config,mrp.group_mrp_manager,1,1,1,1
+access_mrp_dashboard_config_user,mrp.dashboard.config.user,model_mrp_dashboard_config,mrp_dashboard.group_mrp_dashboard_user,1,0,0,0
+access_mrp_dashboard_config_manager,mrp.dashboard.config.manager,model_mrp_dashboard_config,mrp_dashboard.group_mrp_dashboard_manager,1,1,1,1
