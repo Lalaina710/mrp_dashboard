@@ -130,6 +130,58 @@ class MrpDashboardController(http.Controller):
             limit=workorder_limit,
         )
 
+        # Rendements des OFs terminés récents
+        yield_data = []
+        avg_yield = 0.0
+        done_mos_for_yield = MO.search(
+            base_domain + [
+                ('state', '=', 'done'),
+                ('date_finished', '>=', date_n_ago.strftime('%Y-%m-%d')),
+            ],
+            order='date_finished desc',
+            limit=50,
+        )
+        total_raw_all = 0.0
+        total_finished_all = 0.0
+        total_waste_all = 0.0
+        for mo in done_mos_for_yield:
+            # Quantité brute matières consommées
+            raw_qty = sum(
+                sum(ml.quantity for ml in mv.move_line_ids) or mv.product_uom_qty
+                for mv in mo.move_raw_ids.filtered(lambda m: m.state == 'done')
+            )
+            # Quantité produite (produit fini)
+            finished_qty = mo.qty_produced or 0.0
+            # Quantité déchets/pertes
+            waste_qty = 0.0
+            for mv in mo.move_byproduct_ids.filtered(lambda m: m.state == 'done'):
+                categ_name = (mv.product_id.categ_id.complete_name or mv.product_id.categ_id.name or '').lower()
+                if 'dechet' in categ_name or 'déchet' in categ_name or 'perte' in categ_name:
+                    waste_qty += sum(ml.quantity for ml in mv.move_line_ids) or mv.product_uom_qty
+            # Rendement = produit fini / matières premières
+            mo_yield = (finished_qty / raw_qty * 100.0) if raw_qty else 0.0
+
+            total_raw_all += raw_qty
+            total_finished_all += finished_qty
+            total_waste_all += waste_qty
+
+            yield_data.append({
+                'id': mo.id,
+                'name': mo.name,
+                'product': mo.product_id.display_name,
+                'raw_qty': round(raw_qty, 2),
+                'finished_qty': round(finished_qty, 2),
+                'yield_pct': round(mo_yield, 1),
+                'date': mo.date_finished.strftime('%d/%m/%Y') if mo.date_finished else '',
+            })
+
+        avg_yield = round(
+            (total_finished_all / total_raw_all * 100.0) if total_raw_all else 0.0, 1
+        )
+        avg_waste = round(
+            (total_waste_all / total_raw_all * 100.0) if total_raw_all else 0.0, 1
+        )
+
         # Config pour le frontend
         config = request.env['mrp.dashboard.config'].get_config()
 
@@ -144,6 +196,9 @@ class MrpDashboardController(http.Controller):
             'done_recent_qty': sum(r['qty_produced'] for r in done_recent),
             'workcenters': workcenters,
             'workorders': workorders,
+            'avg_yield': avg_yield,
+            'avg_waste': avg_waste,
+            'yield_data': yield_data,
             'config': config,
         }
 

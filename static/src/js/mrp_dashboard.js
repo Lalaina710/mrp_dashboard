@@ -103,6 +103,9 @@ class MrpDashboard extends Component {
                 done_recent_qty: 0,
                 workcenters: [],
                 workorders: [],
+                avg_yield: 0,
+                avg_waste: 0,
+                yield_data: [],
             };
         }
         this.state.loading = false;

@@ -133,7 +133,7 @@
                         <div class="kpi-value" t-esc="state.data.state_counts.confirmed || 0"/>
                         <div class="kpi-label">Confirmés</div>
                     </div>
-                    <div class="kpi-card progress" t-on-click="() => this.openMOs('progress')">
+                    <div class="kpi-card in_progress" t-on-click="() => this.openMOs('progress')">
                         <div class="kpi-value" t-esc="state.data.state_counts.progress || 0"/>
                         <div class="kpi-label">En cours</div>
                     </div>
@@ -156,6 +156,14 @@
                     <div class="kpi-card waiting">
                         <div class="kpi-value" t-esc="state.data.waiting_count || 0"/>
                         <div class="kpi-label">En attente</div>
+                    </div>
+                    <div class="kpi-card yield_avg">
+                        <div class="kpi-value"><t t-esc="state.data.avg_yield || 0"/>%</div>
+                        <div class="kpi-label">Rendement moyen</div>
+                    </div>
+                    <div class="kpi-card waste_avg">
+                        <div class="kpi-value"><t t-esc="state.data.avg_waste || 0"/>%</div>
+                        <div class="kpi-label">Déchet / Perte</div>
                     </div>
                 </div>
 
@@ -184,6 +192,50 @@
                                     </t>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Rendements par OF -->
+                        <div class="db-section">
+                            <div class="db-section-title">
+                                <i class="fa fa-percent me-2"/>Rendements par OF
+                                <span class="float-end text-muted" style="font-size:0.85rem;">
+                                    <t t-esc="state.filters.recent_days"/> derniers jours
+                                    — Moy: <strong><t t-esc="state.data.avg_yield || 0"/>%</strong>
+                                </span>
+                            </div>
+                            <t t-if="state.data.yield_data.length">
+                                <table class="mo-table">
+                                    <thead>
+                                        <tr>
+                                            <th>OF</th>
+                                            <th>Produit</th>
+                                            <th class="text-end">Mat. brute</th>
+                                            <th class="text-end">Produit fini</th>
+                                            <th class="text-end">Rendement</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="state.data.yield_data" t-as="y" t-key="y.id">
+                                            <tr t-on-click="() => this.openMO(y.id)">
+                                                <td t-esc="y.name"/>
+                                                <td t-esc="y.product"/>
+                                                <td class="text-end" t-esc="formatQty(y.raw_qty)"/>
+                                                <td class="text-end" t-esc="formatQty(y.finished_qty)"/>
+                                                <td class="text-end">
+                                                    <span t-attf-class="badge-yield {{ y.yield_pct >= 80 ? 'yield-good' : y.yield_pct >= 50 ? 'yield-mid' : 'yield-low' }}">
+                                                        <t t-esc="y.yield_pct"/>%
+                                                    </span>
+                                                </td>
+                                                <td t-esc="y.date"/>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </t>
+                            <t t-else="">
+                                <div class="text-muted text-center p-3">Aucun OF terminé sur la période</div>
+                            </t>
                         </div>
 
                         <!-- Workcenters -->

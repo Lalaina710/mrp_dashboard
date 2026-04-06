@@ -168,7 +168,7 @@
 }
 .mrp_dashboard .kpi-card.draft { border-left-color: #6c757d; }
 .mrp_dashboard .kpi-card.confirmed { border-left-color: #0d6efd; }
-.mrp_dashboard .kpi-card.progress { border-left-color: #fd7e14; }
+.mrp_dashboard .kpi-card.in_progress { border-left-color: #fd7e14; }
 .mrp_dashboard .kpi-card.to_close { border-left-color: #6f42c1; }
 .mrp_dashboard .kpi-card.done { border-left-color: #198754; }
 .mrp_dashboard .kpi-card.late { border-left-color: #dc3545; }
@@ -189,12 +189,16 @@
 }
 .mrp_dashboard .kpi-card.draft .kpi-value { color: #6c757d; }
 .mrp_dashboard .kpi-card.confirmed .kpi-value { color: #0d6efd; }
-.mrp_dashboard .kpi-card.progress .kpi-value { color: #fd7e14; }
+.mrp_dashboard .kpi-card.in_progress .kpi-value { color: #fd7e14; }
 .mrp_dashboard .kpi-card.to_close .kpi-value { color: #6f42c1; }
 .mrp_dashboard .kpi-card.done .kpi-value { color: #198754; }
 .mrp_dashboard .kpi-card.late .kpi-value { color: #dc3545; }
 .mrp_dashboard .kpi-card.available .kpi-value { color: #20c997; }
 .mrp_dashboard .kpi-card.waiting .kpi-value { color: #ffc107; }
+.mrp_dashboard .kpi-card.yield_avg { border-left-color: #0dcaf0; }
+.mrp_dashboard .kpi-card.yield_avg .kpi-value { color: #0dcaf0; font-size: 1.8rem; }
+.mrp_dashboard .kpi-card.waste_avg { border-left-color: #dc3545; }
+.mrp_dashboard .kpi-card.waste_avg .kpi-value { color: #dc3545; font-size: 1.8rem; }
 
 /* === Sections === */
 .mrp_dashboard .db-section {
@@ -296,7 +300,7 @@
 }
 .mrp_dashboard .badge-draft { background: #6c757d; }
 .mrp_dashboard .badge-confirmed { background: #0d6efd; }
-.mrp_dashboard .badge-progress { background: #fd7e14; }
+.mrp_dashboard .badge-progress, .mrp_dashboard .badge-in_progress { background: #fd7e14; }
 .mrp_dashboard .badge-to_close { background: #6f42c1; }
 .mrp_dashboard .badge-done { background: #198754; }
 .mrp_dashboard .badge-cancel { background: #adb5bd; }
@@ -379,6 +383,18 @@
 .mrp_dashboard .btn-refresh:hover {
     background: #e9ecef;
 }
+
+/* === Yield badges === */
+.mrp_dashboard .badge-yield {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.mrp_dashboard .yield-good { background: #d1fae5; color: #065f46; }
+.mrp_dashboard .yield-mid { background: #fef3c7; color: #92400e; }
+.mrp_dashboard .yield-low { background: #fee2e2; color: #991b1b; }
 
 /* === Progress bar === */
 .mrp_dashboard .progress-bar-container {
