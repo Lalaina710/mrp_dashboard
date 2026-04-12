@@ -81,13 +81,15 @@ class MrpDashboardController(http.Controller):
         mchart_groups = MO.read_group(mchart_domain, fields=['qty_produced:sum', 'date_finished'], groupby=['date_finished:day'])
         mchart_by_date = {}
         for g in mchart_groups:
-            dk = g.get('date_finished:day', '')
-            if dk:
+            rng = g.get('__range', {}).get('date_finished:day', {})
+            from_str = rng.get('from', '')
+            if from_str:
+                dk = from_str[:10]
                 mchart_by_date[dk] = {'qty': g.get('qty_produced', 0), 'count': g.get('__count', 0)}
         daily_production = []
         for i in range(chart_days - 1, -1, -1):
             day = now - timedelta(days=i)
-            day_key = day.strftime('%d %b %Y')
+            day_key = day.strftime('%Y-%m-%d')
             data = mchart_by_date.get(day_key, {})
             daily_production.append({
                 'date': day.strftime('%d/%m'),
