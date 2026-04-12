@@ -252,7 +252,6 @@ class MrpDashboard extends Component {
             domain: [
                 ["state", "in", ["confirmed", "progress"]],
                 ["date_start", "<", now],
-                ["qty_produced", "=", 0],
             ],
             target: "current",
         });

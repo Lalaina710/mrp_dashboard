@@ -45,13 +45,13 @@ class MrpDashboardController(http.Controller):
             domain = base_domain + date_domain + [('state', '=', state)]
             state_counts[state] = MO.search_count(domain)
 
-        # OFs en retard (avec filtres date appliqués)
+        # OFs en retard (qty_produced is non-stored, filter in Python)
         now = fields.Datetime.now()
-        late_count = MO.search_count(base_domain + date_domain + [
+        late_mos = MO.search(base_domain + date_domain + [
             ('state', 'in', ['confirmed', 'progress']),
             ('date_start', '<', now),
-            ('qty_produced', '=', 0),
         ])
+        late_count = len(late_mos.filtered(lambda mo: mo.qty_produced == 0))
 
         # Disponibilité composants (avec filtres date appliqués)
         available_count = MO.search_count(base_domain + date_domain + [
@@ -78,14 +78,14 @@ class MrpDashboardController(http.Controller):
         # Production par jour (optimisé read_group)
         mchart_start = (now - timedelta(days=chart_days - 1)).strftime('%Y-%m-%d 00:00:00')
         mchart_domain = base_domain + [('state', '=', 'done'), ('date_finished', '>=', mchart_start)]
-        mchart_groups = MO.read_group(mchart_domain, fields=['qty_produced:sum', 'date_finished'], groupby=['date_finished:day'])
+        mchart_groups = MO.read_group(mchart_domain, fields=['product_qty:sum', 'date_finished'], groupby=['date_finished:day'])
         mchart_by_date = {}
         for g in mchart_groups:
             rng = g.get('__range', {}).get('date_finished:day', {})
             from_str = rng.get('from', '')
             if from_str:
                 dk = from_str[:10]
-                mchart_by_date[dk] = {'qty': g.get('qty_produced', 0), 'count': g.get('__count', 0)}
+                mchart_by_date[dk] = {'qty': g.get('product_qty', 0), 'count': g.get('__count', 0)}
         daily_production = []
         for i in range(chart_days - 1, -1, -1):
             day = now - timedelta(days=i)
