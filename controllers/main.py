@@ -1,6 +1,7 @@
-from odoo import http
+# Modified by: odoo-backend agent — 2026-04-13 — Fix late_count domain, timezone, perf, filters
+from odoo import fields, http
 from odoo.http import request
-from datetime import datetime, timedelta
+from datetime import timedelta
 from werkzeug.exceptions import Forbidden
 
 
@@ -44,25 +45,26 @@ class MrpDashboardController(http.Controller):
             domain = base_domain + date_domain + [('state', '=', state)]
             state_counts[state] = MO.search_count(domain)
 
-        # OFs en retard
-        late_count = MO.search_count(base_domain + [
+        # OFs en retard (avec filtres date appliqués)
+        now = fields.Datetime.now()
+        late_count = MO.search_count(base_domain + date_domain + [
             ('state', 'in', ['confirmed', 'progress']),
-            ('date_start', '<', datetime.now()),
+            ('date_start', '<', now),
             ('qty_produced', '=', 0),
         ])
 
-        # Disponibilité composants
-        available_count = MO.search_count(base_domain + [
+        # Disponibilité composants (avec filtres date appliqués)
+        available_count = MO.search_count(base_domain + date_domain + [
             ('state', 'in', ['confirmed', 'progress']),
             ('reservation_state', '=', 'assigned'),
         ])
-        waiting_count = MO.search_count(base_domain + [
+        waiting_count = MO.search_count(base_domain + date_domain + [
             ('state', 'in', ['confirmed', 'progress']),
             ('reservation_state', '=', 'confirmed'),
         ])
 
         # Production des N derniers jours
-        date_n_ago = datetime.now() - timedelta(days=recent_days)
+        date_n_ago = now - timedelta(days=recent_days)
         done_recent = MO.search_read(
             base_domain + [
                 ('state', '=', 'done'),
@@ -73,25 +75,24 @@ class MrpDashboardController(http.Controller):
             limit=100,
         )
 
-        # Production par jour (N derniers jours)
+        # Production par jour (optimisé read_group)
+        mchart_start = (now - timedelta(days=chart_days - 1)).strftime('%Y-%m-%d 00:00:00')
+        mchart_domain = base_domain + [('state', '=', 'done'), ('date_finished', '>=', mchart_start)]
+        mchart_groups = MO.read_group(mchart_domain, fields=['qty_produced:sum', 'date_finished'], groupby=['date_finished:day'])
+        mchart_by_date = {}
+        for g in mchart_groups:
+            dk = g.get('date_finished:day', '')
+            if dk:
+                mchart_by_date[dk] = {'qty': g.get('qty_produced', 0), 'count': g.get('__count', 0)}
         daily_production = []
         for i in range(chart_days - 1, -1, -1):
-            day = datetime.now() - timedelta(days=i)
-            day_start = day.replace(hour=0, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
-            day_end = day.replace(hour=23, minute=59, second=59).strftime('%Y-%m-%d %H:%M:%S')
-            domain = base_domain + [
-                ('state', '=', 'done'),
-                ('date_finished', '>=', day_start),
-                ('date_finished', '<=', day_end),
-            ]
-            count = MO.search_count(domain)
-            qty = sum(mo['qty_produced'] for mo in MO.search_read(
-                domain, fields=['qty_produced'],
-            ))
+            day = now - timedelta(days=i)
+            day_key = day.strftime('%d %b %Y')
+            data = mchart_by_date.get(day_key, {})
             daily_production.append({
                 'date': day.strftime('%d/%m'),
-                'count': count,
-                'qty': qty,
+                'count': data.get('count', 0),
+                'qty': data.get('qty', 0),
             })
 
         # OFs actifs

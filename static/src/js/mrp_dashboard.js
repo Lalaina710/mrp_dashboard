@@ -170,8 +170,11 @@ class MrpDashboard extends Component {
     // --- Formatage et helpers ---
 
     formatQty(qty) {
-        if (!qty) return "0";
-        return Math.round(qty).toLocaleString("fr-FR");
+        if (!qty && qty !== 0) return "0,000";
+        return Number(qty).toLocaleString("fr-FR", {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3,
+        });
     }
 
     getBarHeight(qty) {
@@ -237,6 +240,7 @@ class MrpDashboard extends Component {
     }
 
     openLateMOs() {
+        const now = new Date().toISOString().replace("T", " ").substring(0, 19);
         this.action.doAction({
             type: "ir.actions.act_window",
             name: "OFs en retard",
@@ -247,7 +251,8 @@ class MrpDashboard extends Component {
             ],
             domain: [
                 ["state", "in", ["confirmed", "progress"]],
-                ["is_delayed", "=", true],
+                ["date_start", "<", now],
+                ["qty_produced", "=", 0],
             ],
             target: "current",
         });
