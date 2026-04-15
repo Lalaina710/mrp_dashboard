@@ -1,7 +1,8 @@
 # Modified by: odoo-backend agent — 2026-04-13 — Fix late_count domain, timezone, perf, filters
 from odoo import fields, http
 from odoo.http import request
-from datetime import timedelta
+from datetime import timedelta, datetime
+import pytz
 from werkzeug.exceptions import Forbidden
 
 
@@ -21,6 +22,15 @@ class MrpDashboardController(http.Controller):
         workorder_limit = filters.get('workorder_limit', 20)
         date_from = filters.get('date_from')
         date_to = filters.get('date_to')
+
+        # Convert date_from/date_to to UTC boundaries (user timezone)
+        _ftz = pytz.timezone(request.env.user.tz or 'Indian/Antananarivo')
+        if date_from and len(date_from) == 10:
+            _df_local = _ftz.localize(datetime.strptime(date_from, '%Y-%m-%d'))
+            date_from = _df_local.astimezone(pytz.utc).strftime('%Y-%m-%d %H:%M:%S')
+        if date_to and len(date_to) == 10:
+            _dt_local = _ftz.localize(datetime.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59))
+            date_to = _dt_local.astimezone(pytz.utc).strftime('%Y-%m-%d %H:%M:%S')
         responsible_id = filters.get('responsible_id')
         product_id = filters.get('product_id')
 
@@ -79,16 +89,18 @@ class MrpDashboardController(http.Controller):
         mchart_start = (now - timedelta(days=chart_days - 1)).strftime('%Y-%m-%d 00:00:00')
         mchart_domain = base_domain + [('state', '=', 'done'), ('date_finished', '>=', mchart_start)]
         mchart_groups = MO.read_group(mchart_domain, fields=['product_qty:sum', 'date_finished'], groupby=['date_finished:day'])
+        user_tz = pytz.timezone(request.env.user.tz or 'Indian/Antananarivo')
         mchart_by_date = {}
         for g in mchart_groups:
             rng = g.get('__range', {}).get('date_finished:day', {})
             from_str = rng.get('from', '')
             if from_str:
-                dk = from_str[:10]
+                utc_dt = datetime.strptime(from_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
+                dk = utc_dt.astimezone(user_tz).strftime('%Y-%m-%d')
                 mchart_by_date[dk] = {'qty': g.get('product_qty', 0), 'count': g.get('__count', 0)}
         daily_production = []
         for i in range(chart_days - 1, -1, -1):
-            day = now - timedelta(days=i)
+            day = now.replace(tzinfo=pytz.utc).astimezone(user_tz) - timedelta(days=i)
             day_key = day.strftime('%Y-%m-%d')
             data = mchart_by_date.get(day_key, {})
             daily_production.append({
