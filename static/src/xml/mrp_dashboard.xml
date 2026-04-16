@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <templates xml:space="preserve">
     <t t-name="mrp_dashboard.MrpDashboard">
-        <div class="mrp_dashboard">
+        <div t-attf-class="mrp_dashboard {{ state.darkMode ? 'dark-mode' : '' }}">
             <!-- Header avec contrôles -->
             <div class="db-header">
                 <div class="d-flex justify-content-between align-items-center">
@@ -36,6 +36,10 @@
                             <i class="fa fa-filter"/>
                             Filtres
                             <span class="filter-dot" t-if="hasActiveFilters()"/>
+                        </button>
+
+                        <button class="btn-theme" t-on-click="toggleTheme">
+                            <i t-attf-class="fa {{ state.darkMode ? 'fa-sun-o' : 'fa-moon-o' }}"/>
                         </button>
 
                         <button class="btn-refresh" t-on-click="() => this.loadData()">
@@ -173,8 +177,8 @@
                         <div class="db-section">
                             <div class="db-section-title">
                                 <i class="fa fa-bar-chart me-2"/>
-                                Production <t t-esc="state.filters.chart_days"/> derniers jours
-                                <span class="float-end text-muted" style="font-size:0.85rem;">
+                                Production quotidienne
+                                <span class="float-end section-meta">
                                     <t t-esc="state.filters.recent_days"/>j:
                                     <strong t-esc="state.data.done_recent_count"/> OFs
                                     / <strong t-esc="formatQty(state.data.done_recent_qty)"/> unités
@@ -198,12 +202,13 @@
                         <div class="db-section">
                             <div class="db-section-title">
                                 <i class="fa fa-percent me-2"/>Rendements par OF
-                                <span class="float-end text-muted" style="font-size:0.85rem;">
-                                    <t t-esc="state.filters.recent_days"/> derniers jours
+                                <span class="float-end section-meta">
+                                    <t t-esc="state.filters.recent_days"/>j
                                     — Moy: <strong><t t-esc="state.data.avg_yield || 0"/>%</strong>
                                 </span>
                             </div>
                             <t t-if="state.data.yield_data.length">
+                              <div class="table-wrapper">
                                 <table class="mo-table">
                                     <thead>
                                         <tr>
@@ -232,9 +237,10 @@
                                         </t>
                                     </tbody>
                                 </table>
+                              </div>
                             </t>
                             <t t-else="">
-                                <div class="text-muted text-center p-3">Aucun OF terminé sur la période</div>
+                                <div class="db-empty-state">Aucun OF termine sur la periode</div>
                             </t>
                         </div>
 
@@ -242,6 +248,9 @@
                         <div class="db-section">
                             <div class="db-section-title">
                                 <i class="fa fa-cogs me-2"/>Postes de travail
+                                <span class="float-end section-meta">
+                                    <t t-esc="(state.data.workcenters || []).length"/> poste(s)
+                                </span>
                             </div>
                             <div class="wc-cards">
                                 <t t-foreach="state.data.workcenters" t-as="wc" t-key="wc.id">
@@ -249,7 +258,7 @@
                                         <div class="wc-name" t-esc="wc.name"/>
                                         <div class="wc-state">
                                             <t t-if="wc.working_state === 'normal'">En production</t>
-                                            <t t-elif="wc.working_state === 'blocked'">Bloqué</t>
+                                            <t t-elif="wc.working_state === 'blocked'">Bloque</t>
                                             <t t-else="">En maintenance</t>
                                             <span class="ms-2">
                                                 Eff: <strong><t t-esc="wc.time_efficiency"/>%</strong>
@@ -258,7 +267,7 @@
                                     </div>
                                 </t>
                                 <t t-if="!state.data.workcenters.length">
-                                    <div class="text-muted p-3">Aucun poste de travail configuré</div>
+                                    <div class="db-empty-state">Aucun poste de travail configure</div>
                                 </t>
                             </div>
                         </div>
@@ -268,12 +277,13 @@
                     <div class="db-col">
                         <div class="db-section">
                             <div class="db-section-title">
-                                <i class="fa fa-industry me-2"/>Ordres de fabrication actifs
-                                <span class="float-end text-muted" style="font-size:0.85rem;">
-                                    <t t-esc="state.data.active_mos.length"/> affichés
+                                <i class="fa fa-industry me-2"/>OF actifs
+                                <span class="float-end section-meta">
+                                    <t t-esc="state.data.active_mos.length"/> affiches
                                 </span>
                             </div>
                             <t t-if="state.data.active_mos.length">
+                              <div class="table-wrapper">
                                 <table class="mo-table">
                                     <thead>
                                         <tr>
@@ -317,9 +327,10 @@
                                         </t>
                                     </tbody>
                                 </table>
+                              </div>
                             </t>
                             <t t-else="">
-                                <div class="text-muted text-center p-4">
+                                <div class="db-empty-state">
                                     <i class="fa fa-check-circle fa-2x mb-2 d-block text-success"/>
                                     Aucun OF actif
                                 </div>
@@ -330,6 +341,9 @@
                         <div class="db-section">
                             <div class="db-section-title">
                                 <i class="fa fa-tasks me-2"/>Ordres de travail en cours
+                                <span class="float-end section-meta">
+                                    <t t-esc="(state.data.workorders || []).length"/> OT
+                                </span>
                             </div>
                             <t t-if="state.data.workorders.length">
                                 <ul class="wo-list">
@@ -356,7 +370,7 @@
                                 </ul>
                             </t>
                             <t t-else="">
-                                <div class="text-muted text-center p-3">Aucun ordre de travail en cours</div>
+                                <div class="db-empty-state">Aucun ordre de travail en cours</div>
                             </t>
                         </div>
                     </div>

@@ -35,6 +35,8 @@ class MrpDashboard extends Component {
             autoRefreshInterval: 0,
             // Dernière mise à jour
             lastUpdate: '',
+            // Dark mode
+            darkMode: localStorage.getItem('mrp_dashboard_dark') === 'true',
         });
         this._refreshTimer = null;
 
@@ -129,6 +131,11 @@ class MrpDashboard extends Component {
 
     applyFilters() {
         this.loadData();
+    }
+
+    toggleTheme() {
+        this.state.darkMode = !this.state.darkMode;
+        localStorage.setItem('mrp_dashboard_dark', this.state.darkMode);
     }
 
     resetFilters() {
